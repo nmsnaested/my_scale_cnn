@@ -32,17 +32,6 @@ import pickle
 device =  torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
-class Subset(Dataset):
-    def __init__(self, dataset, indices):
-        self.dataset = dataset
-        self.indices = indices
-    
-    def __getitem__(self, i):
-        return self.dataset[self.indices[i]]
-
-    def __len__(self):
-        return len(self.indices)
-
 nb_epochs=150
 learning_rate = 0.0001
 batch_size = 256
@@ -108,7 +97,7 @@ for ii in range(repeats):
                             transforms.Resize(40), RandomRescale(size = 40, scales = (s, s), sampling = "uniform"), 
                             transforms.ToTensor(), transforms.Normalize((0.1307,),(0.3081,))])
         test_set = datasets.MNIST(root=root, train=False, transform=test_transf, download=True)
-        test_loader = DataLoader(dataset=test_set, batch_size=batch_size,shuffle=False)
+        test_loader = DataLoader(dataset=test_set, batch_size=batch_size,shuffle=False, num_workers=1, pin_memory=True)
 
         for epoch in range(1, nb_epochs + 1):  
             test_l, test_a = test(model, test_loader, criterion, epoch, batch_log, device)
