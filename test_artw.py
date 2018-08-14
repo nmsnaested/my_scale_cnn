@@ -19,9 +19,10 @@ from loaddataset import GetArtDataset
 from scale_cnn.convolution import ScaleConvolution
 from scale_cnn.pooling import ScalePool
 
-from artwCNNs import SiCNN, Model, SiAllCNN
+from architectures import SiCNN_3
+from resNet import Model 
 
-from functions import train, test
+from functions import train, test, plot_figures
 from rescale import RandomResizedCrop
 import pickle
 

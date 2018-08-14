@@ -21,7 +21,7 @@ def wrap(f):
 
 
 class Block(nn.Module):
-    def __init__(self, f_in, f_out,size,ratio,nratio,srange,padding,stride=1):
+    def __init__(self, f_in, f_out, size, ratio, nratio, srange, padding, stride=1):
         super().__init__()
 
         self.conv1 = ScaleConvolution(f_in, f_out, size, ratio, nratio, srange, padding=padding,stride=stride)
@@ -58,7 +58,7 @@ class Block(nn.Module):
 
 
 class Model(nn.Module):
-    def __init__(self, f_in, size, ratio, nratio, srange, padding=0):
+    def __init__(self, f_in, size, ratio, nratio, srange, padding=0, nb_classes=10):
         super().__init__()
         self.f_in = f_in
         self.size = size
@@ -66,8 +66,8 @@ class Model(nn.Module):
         self.nratio = nratio
         self.srange = srange
         self.padding = padding
+        self.nb_classes = nb_classes
 
-        #features = [3, 12, 21]
         features = [self.f_in, 36, 64]
         repeat = 3
 
@@ -82,7 +82,7 @@ class Model(nn.Module):
                 blocks.append(m)
 
         self.blocks = nn.ModuleList(blocks)
-        self.readout = ScaleConvolution(f, 10, self.size, self.ratio, self.nratio, self.srange, padding=self.padding)
+        self.readout = ScaleConvolution(f, self.nb_classes, self.size, self.ratio, self.nratio, self.srange, padding=self.padding)
         self.pool = ScalePool(self.ratio)
 
 

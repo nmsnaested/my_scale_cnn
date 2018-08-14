@@ -11,17 +11,20 @@ from scale_cnn.convolution import ScaleConvolution
 from scale_cnn.pooling import ScalePool
 
 class StdNet(nn.Module):
-    def __init__(self, f_in=3):
+    def __init__(self, f_in=3, nb_classes=10):
         super().__init__()
         '''
         Standard convolution network, 2 conv layers + 2 fc layers
         :param f_in: number of input features 
+        :param nb_classes: number of classes on output
         '''
         self.f_in = f_in
+        self.nb_classes = nb_classes
+
         self.conv1 = nn.Conv2d(f_in, 12, 7, 2)
         self.conv2 = nn.Conv2d(12, 21, 5)
         self.fc1 = nn.Linear(21 * 25 * 25, 150)
-        self.fc2 = nn.Linear(150, 10)
+        self.fc2 = nn.Linear(150, self.nb_classes)
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
@@ -32,13 +35,18 @@ class StdNet(nn.Module):
         return x
 
 class AllCNN(nn.Module):   
-    def __init__(self, f_in=3, n_classes=10, **kwargs):
+    def __init__(self, f_in=3, nb_classes=10):
         '''
         All convolutional network https://arxiv.org/pdf/1412.6806.pdf 
         based on code from https://github.com/StefOe/all-conv-pytorch/blob/master/allconv.py
         '''
-        super(AllCNN, self).__init__()
-        self.conv1 = nn.Conv2d(f_in, 96, 3, padding=1)
+        super().__init__()
+
+        self.f_in = f_in
+        self.nb_classes = nb_classes
+
+
+        self.conv1 = nn.Conv2d(self.f_in, 96, 3, padding=1)
         self.conv2 = nn.Conv2d(96, 96, 3, padding=1)
         self.conv3 = nn.Conv2d(96, 96, 3, padding=1, stride=2)
         self.conv4 = nn.Conv2d(96, 192, 3, padding=1)
@@ -46,7 +54,7 @@ class AllCNN(nn.Module):
         self.conv6 = nn.Conv2d(192, 192, 3, padding=1, stride=2)
         self.conv7 = nn.Conv2d(192, 192, 3, padding=1)
         self.conv8 = nn.Conv2d(192, 192, 1)
-        self.conv9 = nn.Conv2d(192, n_classes, 1)
+        self.conv9 = nn.Conv2d(192, self.n_classes, 1)
 
     def forward(self, x):
         #x_drop = F.dropout(x, .2)
@@ -70,21 +78,22 @@ class AllCNN(nn.Module):
 
 
 class SiCNN(nn.Module): 
-    def __init__(self, f_in, ratio, nratio): 
+    def __init__(self, f_in, ratio, nratio, nb_classes=10): 
         super().__init__()
         '''
-        Basic scale equivariant architecture, based on StdNet
+        Basic scale equivariant architecture, replicating StdNet
         '''
         self.f_in = f_in
         self.ratio = ratio 
         self.nratio = nratio
+        self.nb_classes = nb_classes
 
         self.conv1 = ScaleConvolution(self.f_in, 12, 7, self.ratio, self.nratio, srange = 0, boundary_condition = "dirichlet", stride = 2)
         self.conv2 = ScaleConvolution(12, 21, 5, self.ratio, self.nratio, srange = 1, boundary_condition = "dirichlet")
         self.pool = ScalePool(self.ratio)
         
         self.fc1 = nn.Linear(21, 150, bias = True)
-        self.fc2 = nn.Linear(150, 10, bias = True)
+        self.fc2 = nn.Linear(150, self.nb_classes, bias = True)
 
     def forward(self, x): 
         '''
@@ -101,23 +110,24 @@ class SiCNN(nn.Module):
         return x
 
 class kanazawa(nn.Module): 
-    def __init__(self, f_in, ratio, nratio, srange=1): 
+    def __init__(self, f_in, ratio, nratio, srange=1, nb_classes=10): 
         super().__init__()
         '''
-        Scale equivariant arch, based on architecture in Kanazawa's paper 
-        https://arxiv.org/abs/1412.5104
+        Scale equivariant arch, based on architecture in Kanazawa's paper https://arxiv.org/abs/1412.5104
+        selecting srange = 1 is equivalent to the paper
         '''
         self.f_in = f_in
         self.ratio = ratio 
         self.nratio = nratio
         self.srange = srange
+        self.nb_classes = nb_classes
 
         self.conv1 = ScaleConvolution(self.f_in, 36, 3, self.ratio, self.nratio, srange = 0, boundary_condition = "dirichlet", stride = 2)
         self.conv2 = ScaleConvolution(36, 64, 3, self.ratio, self.nratio, srange = 3, boundary_condition = "dirichlet")
         self.pool = ScalePool(self.ratio)
         
         self.fc1 = nn.Linear(64, 150, bias = True)
-        self.fc2 = nn.Linear(150, 10, bias = True)
+        self.fc2 = nn.Linear(150, self.nb_classes, bias = True)
 
     def forward(self, x): 
         x = x.unsqueeze(1)  # [batch, sigma, feature, y, x]
@@ -131,7 +141,7 @@ class kanazawa(nn.Module):
         return x
 
 class SiCNN_3(nn.Module): 
-    def __init__(self, f_in=1, size=5, ratio=2**(2/3), nratio=3, srange=1, padding=0): 
+    def __init__(self, f_in=1, size=5, ratio=2**(2/3), nratio=3, srange=1, padding=0, nb_classes=10): 
         super().__init__()
         '''
         Scale equivariant arch with 3 convolutional layers
@@ -142,6 +152,7 @@ class SiCNN_3(nn.Module):
         self.nratio = nratio
         self.srange = srange
         self.padding = padding
+        self.nb_classes = nb_classes
 
         self.conv1 = ScaleConvolution(self.f_in, 96, self.size, self.ratio, self.nratio, srange = 0, boundary_condition = "dirichlet", padding=self.padding, stride = 2)
         self.conv2 = ScaleConvolution(96, 96, self.size, self.ratio, self.nratio, srange = self.srange, boundary_condition = "dirichlet", padding=self.padding)
@@ -149,7 +160,7 @@ class SiCNN_3(nn.Module):
         self.pool = ScalePool(self.ratio)
         
         self.fc1 = nn.Linear(192, 150, bias=True)
-        self.fc2 = nn.Linear(150, 10, bias=True)
+        self.fc2 = nn.Linear(150, self.nb_classes, bias=True)
 
     def forward(self, x): 
         x = x.unsqueeze(1)  # [batch, sigma, feature, y, x]
@@ -165,7 +176,7 @@ class SiCNN_3(nn.Module):
 
 
 class SiAllCNN(nn.Module): 
-    def __init__(self, f_in, ratio, nratio):
+    def __init__(self, f_in, ratio, nratio, nb_classes=10):
         super().__init__()
         '''
         Squale equivariant All convolutional netw
@@ -173,6 +184,7 @@ class SiAllCNN(nn.Module):
         self.f_in = f_in
         self.ratio = ratio 
         self.nratio = nratio
+        self.nb_classes = nb_classes
 
         self.conv1 = ScaleConvolution(self.f_in, 96, 3, ratio=self.ratio, nratio=self.nratio, srange=0, boundary_condition="dirichlet", padding=1)
         self.conv2 = ScaleConvolution(96, 96, 3, self.ratio, self.nratio, srange=2, boundary_condition="dirichlet", padding=1)
@@ -184,7 +196,7 @@ class SiAllCNN(nn.Module):
         
         self.weight8 = nn.Parameter(torch.empty(192, 192))
         nn.init.orthogonal_(self.weight8)
-        self.weight9 = nn.Parameter(torch.empty(10, 192))
+        self.weight9 = nn.Parameter(torch.empty(self.nb_classes, 192))
         nn.init.orthogonal_(self.weight9)
 
     def forward(self, x):
@@ -213,7 +225,7 @@ class SiAllCNN(nn.Module):
 
 
 class miniSiAll(nn.Module): 
-    def __init__(self, f_in, ratio, nratio):
+    def __init__(self, f_in, ratio, nratio, nb_classes=10):
         super().__init__()
         '''
         Smaller version of the squale equivariant All CNN 
@@ -221,12 +233,13 @@ class miniSiAll(nn.Module):
         self.f_in = f_in
         self.ratio = ratio 
         self.nratio = nratio
+        self.nb_classes = nb_classes
 
         self.conv1 = ScaleConvolution(self.f_in, 96, 3, ratio=self.ratio, nratio=self.nratio, srange=0, boundary_condition="dirichlet", padding=1)
         self.conv2 = ScaleConvolution(96, 96, 3, self.ratio, self.nratio, srange=2, boundary_condition="dirichlet", padding=1)
         self.conv3 = ScaleConvolution(96, 192, 3, self.ratio, self.nratio, srange=2, boundary_condition="dirichlet", padding=1)
         self.conv4 = ScaleConvolution(192, 192, 3, self.ratio, self.nratio, srange=2, boundary_condition="dirichlet", padding=1)
-        self.weight5 = nn.Parameter(torch.empty(10, 192))
+        self.weight5 = nn.Parameter(torch.empty(self.nb_classes, 192))
         nn.init.orthogonal_(self.weight5)
 
     def forward(self, x):
