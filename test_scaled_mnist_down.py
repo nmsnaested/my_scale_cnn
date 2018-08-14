@@ -111,4 +111,5 @@ for ii, model in enumerate(models):
     
 log.close()
 
-plot_figures("mnist_down_log.pickle", name="MNIST_comp_down", mean=False)
+plot_figures("mnist_down_log.pickle", name="MNIST_comp_down", train = True, mean=False)
+plot_figures("mnist_down_log.pickle", name="MNIST_comp_down", train = False, mean=False)

@@ -1,3 +1,5 @@
+#pylint: disable=E1101
+
 import torch
 import torchvision
 import torchvision.datasets as datasets 
@@ -88,13 +90,16 @@ def plot_figures(filename, name, train, mean=False):
     accs = []
     if train:
         t = "training"
+        print(t)
         for ii in range(1, nb_models+1):
             dynamics = pickle.load(pickle_log)
             losses.append(dynamics["train_loss"])
             accs.append(dynamics["train_acc"])
     else:
         t = "validation"
-        for ii in range(1, nb_models+1):      
+        print(t)
+        for ii in range(1, nb_models+1):    
+            dynamics = pickle.load(pickle_log)  
             losses.append(dynamics["valid_loss"])
             accs.append(dynamics["valid_acc"])
 
@@ -121,7 +126,7 @@ def plot_figures(filename, name, train, mean=False):
 
     else: 
         plt.figure()
-        for ii in len(losses):
+        for ii in range(len(losses)):
             plt.plot(losses[ii], label = "model {}".format(ii))
         plt.title("{} loss {}".format(t, name))
         plt.xlabel("Epochs")
@@ -131,7 +136,7 @@ def plot_figures(filename, name, train, mean=False):
         #plt.show()
 
         plt.figure()
-        for ii in len(accs):
+        for ii in range(len(accs)):
             plt.plot(accs[ii], label = "model {}".format(ii))
         plt.title("{} accuracy {}".format(t, name))
         plt.xlabel("Epoch")
