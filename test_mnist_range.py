@@ -95,7 +95,8 @@ for scale in scales:
         for epoch in range(1, nb_epochs + 1): 
             train_l, train_a = train(model, train_loader, learning_rate, criterion, epoch, batch_log, device) 
             train_l, train_a = test(model, train_loader, criterion, epoch, batch_log, device) 
-            test_l, test_a = test(model, test_loader, criterion, epoch, batch_log, device)
+        
+        test_l, test_a = test(model, test_loader, criterion, epoch, batch_log, device)
             
         s_test_losses.append(test_l)
         s_test_accs.append(test_a)

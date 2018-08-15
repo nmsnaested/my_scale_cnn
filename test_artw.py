@@ -13,8 +13,6 @@ from torch.utils.data import Dataset, DataLoader, ConcatDataset
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import loaddataset as lds
-from loaddataset import GetArtDataset
 
 from scale_cnn.convolution import ScaleConvolution
 from scale_cnn.pooling import ScalePool
@@ -22,9 +20,14 @@ from scale_cnn.pooling import ScalePool
 from architectures import SiCNN_3
 from resNet import Model 
 
+import artw_ds
+from artw_ds import GetArtDataset, EqSampler
+
 from functions import train, test, plot_figures
-from rescale import RandomResizedCrop
 import pickle
+from PIL import Image
+Image.MAX_IMAGE_PIXELS = None
+
 
 device =  torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
@@ -47,18 +50,22 @@ parameters = {
 phandle = open("Artw_log.pickle", "wb")
 pickle.dump(parameters, phandle)
 
-train_transforms = transforms.Compose([transforms.RandomCrop(224), transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+train_transforms = torchvision.transforms.Compose([
+                lambda path: PIL.Image.open(path),
+                torchvision.transforms.RandomResizedCrop(224, scale=(0.2, 1.0), ratio=(1, 1)),
+                torchvision.transforms.ToTensor(),
+            ])
 
-test_transforms = transforms.Compose([transforms.Resize(512), transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+test_transforms = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
 base_dir = "./art_dataset"
-train_set = lds.GetArtDataset(basedir=base_dir, transforms=train_transforms, train=True)
-test_set = lds.GetArtDataset(basedir=base_dir, transforms=test_transforms, train=False)
+train_set = artw_ds.GetArtDataset(basedir=base_dir, mode="train", transforms=train_transforms)
+
+test_set = artw_ds.GetArtDataset(basedir=base_dir, mode="test", transforms=test_transforms)
 
 train_loader = DataLoader(train_set, batch_size = batch_size, shuffle = True, num_workers=4, pin_memory=True)
 test_loader = DataLoader(test_set, batch_size = 1, shuffle = False, num_workers=4, pin_memory=True)
 
-print("Datasets done")
 
 """
 #Show images of train or test set 

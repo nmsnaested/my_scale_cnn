@@ -99,8 +99,7 @@ for ii in range(repeats):
         test_set = datasets.MNIST(root=root, train=False, transform=test_transf, download=True)
         test_loader = DataLoader(dataset=test_set, batch_size=batch_size,shuffle=False, num_workers=1, pin_memory=True)
 
-        for epoch in range(1, nb_epochs + 1):  
-            test_l, test_a = test(model, test_loader, criterion, epoch, batch_log, device)
+        test_l, test_a = test(model, test_loader, criterion, epoch, batch_log, device)
 
         s_test_loss.append(test_l) #take only last value 
         s_test_acc.append(test_a)
@@ -130,25 +129,22 @@ pickle.dump(std_test_accs, log)
 log.close()
 
 plt.figure()
-plt.plot(s, avg_test_losses, yerr=std_test_losses)
+plt.errorbar(scales, avg_test_losses, yerr=std_test_losses)
 plt.title("Average loss vs Test scale")
 plt.xlabel("Test scale")
 plt.ylabel("Categorical cross entropy")
-plt.legend()
 plt.savefig("test_loss_gaussian_mean.pdf")
 
 plt.figure()
-plt.plot(s, avg_test_accs, yerr=std_test_accs)
+plt.errorbar(scales, avg_test_accs, yerr=std_test_accs)
 plt.title("Average accuracy vs Test scale")
 plt.xlabel("Test scale")
 plt.ylabel("Accuracy %")
-plt.legend()
 plt.savefig("test_acc_gaussian_mean.pdf")
 
 plt.figure()
-plt.plot(s, [100-x for x in avg_test_accs], yerr=std_test_accs)
+plt.errorbar(scales, [100-x for x in avg_test_accs], yerr=std_test_accs)
 plt.title("Average error vs Test scale")
 plt.xlabel("Test scale")
 plt.ylabel("Error %")
-plt.legend()
 plt.savefig("test_err_gaussian_mean.pdf")
