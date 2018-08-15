@@ -24,7 +24,7 @@ class RandomResizedCrop(object):
 
         w = int(round(target_area ** 0.5))
         w = min(img.size[0], img.size[1], w)
-        i = (img.size[1] - w) // 2
+        i = (img.size[1] - w) // 2 #take crop at the center of the img 
         j = (img.size[0] - w) // 2
         return i, j, w, w #square img
 

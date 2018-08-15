@@ -36,7 +36,7 @@ class Subset(Dataset):
     def __len__(self):
         return len(self.indices)
 
-nb_epochs=100
+nb_epochs=200
 learning_rate = 0.00001
 batch_size = 128
 batch_log = 70
@@ -57,25 +57,23 @@ parameters = {
     "nb channels": nratio,
     "overlap": srange    
 }
+
+scales = [0.75, 0.875, 1.0] # crop center 24x24 or 28x28 and resize to 32x32, or leave 32x32 
+criterion = nn.CrossEntropyLoss()
+
 log = open("cifar10_mean_log.pickle", "wb")
 pickle.dump(parameters, log)
 
-scales = [0.75, 0.875, 1.0] # crop center 24x24 or 28x28 and resize to 32x32, or leave 32x32 
-
 train_transf = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]) #mean 0 std 1 for RGB
-
 
 idx = list(range(50000))
 train_set = Subset(datasets.CIFAR10(root='./cifardata', train=True, transform=train_transf, download=True), idx[10000:])
-
-#test_set = datasets.CIFAR10(root='./cifardata', train=False, transform=test_transf, download=True)
-
 train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
 
+#test_set = datasets.CIFAR10(root='./cifardata', train=False, transform=test_transf, download=True)
 #test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False)
 classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
-criterion = nn.CrossEntropyLoss()
 
 pickle.dump(repeats, log)
 
@@ -100,41 +98,57 @@ for ii in range(repeats):
         "train_acc": train_acc
     }
     pickle.dump(dynamics, log)
-    with open("trained_model_{}.pickle".format(ii), "wb") as save:
-        pickle.dump(model, save)
 
-plot_figures("cifar10_mean_log.pickle", name="CIFAR10", train=True, mean=True)
+    with open("trained_model_{}_cifar.pickle".format(ii), "wb") as save:
+        pickle.dump(model, save)
 
 log.close()
 
+plot_figures("cifar10_mean_log.pickle", name="CIFAR10", mode="train", mean=True)
+
 log = open("cifar10_valid_mean_log.pickle", "wb")
 pickle.dump(parameters, log)
-pickle.dump(repeats * len(scales), log)
+pickle.dump(len(scales), log)
 
-for ii in range(repeats):
-    model = pickle.load("trained_model_{}.pickle".format(ii), "rb")
+for s in scales: 
+    avg_valid_losses = []
+    avg_valid_accs = []
 
-    for s in scales: 
-        test_transf = transforms.Compose([
-            RandomRescale(size=32, sampling="uniform", scales=(s, s)), 
-            transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-            ]) 
-        valid_set = Subset(datasets.CIFAR10(root='./cifardata', train=True, transform=test_transf, download=True), idx[:10000])
-        valid_loader = DataLoader(valid_set, batch_size=batch_size, shuffle=True)
+    test_transf = transforms.Compose([
+        RandomRescale(size=32, sampling="uniform", scales=(s, s)), 
+        transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+        ]) 
+    valid_set = Subset(datasets.CIFAR10(root='./cifardata', train=True, transform=test_transf, download=True), idx[:10000])
+    valid_loader = DataLoader(valid_set, batch_size=batch_size, shuffle=True)
+    
+    s_valid_loss = []
+    s_valid_acc = []
 
-        s_valid_loss = []
-        s_valid_acc = []
+    for ii in range(repeats):
+        infile = open("trained_model_{}.pickle".format(ii), "rb")
+        model = pickle.load(infile)
+
+        m_valid_loss = []
+        m_valid_acc = []
+    
         for epoch in range(1, nb_epochs + 1):
             valid_l, valid_a = test(model, valid_loader, criterion, epoch, batch_log, device)
-            s_valid_loss.append(valid_l)
-            s_valid_acc.append(valid_a)
+            m_valid_loss.append(valid_l)
+            m_valid_acc.append(valid_a)
 
-        dynamics = {
-            "model": ii,
-            "scale": s,
-            "valid_loss": s_valid_loss,
-            "valid_acc": s_valid_acc
-        }
-        pickle.dump(dynamics, log)    
+        s_valid_loss.append(m_valid_loss)
+        s_valid_acc.append(m_valid_acc)
 
-plot_figures("cifar10_valid_mean_log.pickle", name="CIFAR10", train=False, mean=True)
+    avg_valid_losses.append(np.mean(np.array(s_valid_loss)))
+    avg_valid_accs.append(np.mean(np.array(s_valid_acc)))
+
+    dynamics = {
+        "scale": s,
+        "valid_loss": avg_valid_losses,
+        "valid_acc": avg_valid_accs
+    }
+    pickle.dump(dynamics, log)  
+
+log.close()          
+
+plot_figures("cifar10_valid_mean_log.pickle", name="CIFAR10", mode="valid", mean=False)

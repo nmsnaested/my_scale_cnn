@@ -42,10 +42,10 @@ f_in = 1
 size = 5
 ratio = 2**(2/3) 
 nratio = 3
-srange = 2 
+srange = 0 
 padding = 0
 
-log = open("mnist_gaussian_log.pickle", "wb")
+log = open("mnist_gaussian_sr0_log.pickle", "wb")
 
 parameters = {
     "epochs": nb_epochs,
@@ -87,7 +87,7 @@ for ii in range(repeats):
         train_l, train_a = train(model, train_loader, learning_rate, criterion, epoch, batch_log, device) 
         train_l, train_a = test(model, train_loader, criterion, epoch, batch_log, device) 
     
-    pickle.dump(model, open("model_{}_trained.pickle".format(ii), "wb"))
+    pickle.dump(model, open("trained_model_{}_sr0.pickle".format(ii), "wb"))
 
     #lists of last test loss and acc for each scale with model ii
     s_test_loss = [] 
@@ -121,6 +121,12 @@ avg_test_accs = np.mean(np.array(test_accs), axis=0)
 std_test_losses = np.std(np.array(test_losses), axis=0)
 std_test_accs = np.std(np.array(test_accs), axis=0)
 
+with open("gaussian_sr0.txt", "w") as out:
+    out.write(avg_test_losses)
+    out.write(avg_test_accs)
+    out.write(std_test_losses)
+    out.write(std_test_accs)
+
 pickle.dump(avg_test_losses, log)
 pickle.dump(avg_test_accs, log)
 pickle.dump(std_test_losses, log)
@@ -133,18 +139,18 @@ plt.errorbar(scales, avg_test_losses, yerr=std_test_losses)
 plt.title("Average loss vs Test scale")
 plt.xlabel("Test scale")
 plt.ylabel("Categorical cross entropy")
-plt.savefig("test_loss_gaussian_mean.pdf")
+plt.savefig("test_loss_gaussian_mean_sr0.pdf")
 
 plt.figure()
 plt.errorbar(scales, avg_test_accs, yerr=std_test_accs)
 plt.title("Average accuracy vs Test scale")
 plt.xlabel("Test scale")
 plt.ylabel("Accuracy %")
-plt.savefig("test_acc_gaussian_mean.pdf")
+plt.savefig("test_acc_gaussian_mean_sr0.pdf")
 
 plt.figure()
 plt.errorbar(scales, [100-x for x in avg_test_accs], yerr=std_test_accs)
 plt.title("Average error vs Test scale")
 plt.xlabel("Test scale")
 plt.ylabel("Error %")
-plt.savefig("test_err_gaussian_mean.pdf")
+plt.savefig("test_err_gaussian_mean_sr0.pdf")

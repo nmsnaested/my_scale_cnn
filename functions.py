@@ -81,27 +81,20 @@ def test(model,test_loader,criterion,epoch,batch_log,device):
     return avg_loss, tot_acc
 
 
-def plot_figures(filename, name, train, mean=False):
+def plot_figures(filename, name, mode, mean=False):
+    '''
+    :param mode: train, test or valid
+    '''
     pickle_log = open(filename,'rb')
     params = pickle.load(pickle_log)
     nb_models = pickle.load(pickle_log)
 
     losses = []
     accs = []
-    if train:
-        t = "training"
-        print(t)
-        for ii in range(1, nb_models+1):
-            dynamics = pickle.load(pickle_log)
-            losses.append(dynamics["train_loss"])
-            accs.append(dynamics["train_acc"])
-    else:
-        t = "validation"
-        print(t)
-        for ii in range(1, nb_models+1):    
-            dynamics = pickle.load(pickle_log)  
-            losses.append(dynamics["valid_loss"])
-            accs.append(dynamics["valid_acc"])
+    for ii in range(nb_models):
+        dynamics = pickle.load(pickle_log)
+        losses.append(dynamics["{}_loss".format(mode)])
+        accs.append(dynamics["{}_acc".format(mode)])
 
     if mean:
         avg_loss = np.mean(np.array(losses), axis=0)
@@ -110,39 +103,41 @@ def plot_figures(filename, name, train, mean=False):
         std_loss = np.std(np.array(losses), axis=0)
         std_acc = np.std(np.array(accs), axis=0)
         
-        plt.figure()
-        plt.plot(avg_loss, yerr=std_loss)
-        plt.title("Mean {} loss {}".format(t, name)) 
-        plt.xlabel("Epochs")
-        plt.ylabel("Categorical cross entropy")
-        plt.savefig("{}_loss_mean_{}.pdf".format(t, name))
+        x = list(range(len(avg_loss)))
 
         plt.figure()
-        plt.plot(avg_acc, yerr=std_acc)
-        plt.title("Mean {} accuracy {}".format(t, name))
+        plt.errorbar(x, avg_loss, yerr=std_loss)
+        plt.title("Mean {} loss {}".format(mode, name)) 
+        plt.xlabel("Epochs")
+        plt.ylabel("Categorical cross entropy")
+        plt.savefig("{}_loss_mean_{}.pdf".format(mode, name))
+
+        plt.figure()
+        plt.errorbar(x, avg_acc, yerr=std_acc)
+        plt.title("Mean {} accuracy {}".format(mode, name))
         plt.xlabel("Epoch")
         plt.ylabel("Accuracy")
-        plt.savefig("{}_acc_mean_{}.pdf".format(t, name))
+        plt.savefig("{}_acc_mean_{}.pdf".format(mode, name))
 
     else: 
         plt.figure()
         for ii in range(len(losses)):
             plt.plot(losses[ii], label = "model {}".format(ii))
-        plt.title("{} loss {}".format(t, name))
+        plt.title("{} loss {}".format(mode, name))
         plt.xlabel("Epochs")
         plt.ylabel("Categorical cross entropy")
         plt.legend()
-        plt.savefig("{}_losses_{}.pdf".format(t, name))
+        plt.savefig("{}_losses_{}.pdf".format(mode, name))
         #plt.show()
 
         plt.figure()
         for ii in range(len(accs)):
             plt.plot(accs[ii], label = "model {}".format(ii))
-        plt.title("{} accuracy {}".format(t, name))
+        plt.title("{} accuracy {}".format(mode, name))
         plt.xlabel("Epoch")
         plt.ylabel("Accuracy")
         plt.legend()
-        plt.savefig("{}_accuracies_{}.pdf".format(t, name))
+        plt.savefig("{}_accuracies_{}.pdf".format(mode, name))
         #plt.show()
 
     pickle_log.close()
