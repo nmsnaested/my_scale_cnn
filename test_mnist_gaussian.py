@@ -121,12 +121,6 @@ avg_test_accs = np.mean(np.array(test_accs), axis=0)
 std_test_losses = np.std(np.array(test_losses), axis=0)
 std_test_accs = np.std(np.array(test_accs), axis=0)
 
-with open("gaussian_sr0.txt", "w") as out:
-    out.write(avg_test_losses)
-    out.write(avg_test_accs)
-    out.write(std_test_losses)
-    out.write(std_test_accs)
-
 pickle.dump(avg_test_losses, log)
 pickle.dump(avg_test_accs, log)
 pickle.dump(std_test_losses, log)
