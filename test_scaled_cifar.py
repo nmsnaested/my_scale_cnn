@@ -75,78 +75,106 @@ train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
 #test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False)
 classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
-
 pickle.dump(repeats, log)
 
-for ii in range(repeats): 
-    model = SiCNN_3(f_in, size, ratio, nratio, srange)
-    model.to(device)
+s_avg_t_losses = []
+s_std_t_losses = []
+s_avg_t_accs = []
+s_std_t_accs = []
 
-    train_loss=[]
-    train_acc = []
-    valid_loss = []
-    valid_acc = []
-    for epoch in range(1, nb_epochs + 1): 
-        train_l, train_a = train(model, train_loader, learning_rate, criterion, epoch, batch_log, device) 
-        train_l, train_a = test(model, train_loader, criterion, epoch, batch_log, device) 
-        valid_l, valid_a
-        train_loss.append(train_l)
-        train_acc.append(train_a)
-        valid_loss.append
-        valid_acc.append 
+s_avg_v_losses = []
+s_std_v_losses = []
+s_avg_v_accs = []
+s_std_v_accs = []
+
+for s in scales:
+    test_transf = transforms.Compose([
+    RandomRescale(size=32, sampling="uniform", scales=(s, s)), 
+    transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    ]) 
+    valid_set = Subset(datasets.CIFAR10(root='./cifardata', train=True, transform=test_transf, download=True), idx[:10000])
+    valid_loader = DataLoader(valid_set, batch_size=batch_size, shuffle=True)
+
+    m_t_losses = []
+    m_t_accs = []
+    m_v_losses = []
+    m_v_accs = []
+
+    for ii in range(repeats): 
+        model = SiCNN_3(f_in, size, ratio, nratio, srange)
+        model.to(device)
+
+        train_loss=[]
+        train_acc = []
+        valid_loss = []
+        valid_acc = []
+        for epoch in range(1, nb_epochs + 1): 
+            train_l, train_a = train(model, train_loader, learning_rate, criterion, epoch, batch_log, device) 
+            train_l, train_a = test(model, train_loader, criterion, epoch, batch_log, device) 
+            valid_l, valid_a = test(model, valid_loader, criterion, epoch, batch_log, device)
+            train_loss.append(train_l)
+            train_acc.append(train_a)
+            valid_loss.append
+            valid_acc.append 
+        
+        with open("model_{}_{}_cifar.pickle".format(s, ii), "wb") as save:
+            pickle.dump(model, save)
     
-    with open("model_{}_cifar.pickle".format(ii), "wb") as save:
-        pickle.dump(model, save)
+        m_t_losses.append(train_loss)
+        m_t_accs.append(train_acc)
+        m_v_losses.append(valid_loss)
+        m_v_losses.append(valid_acc)
 
-    dynamics = {
-        "model": ii,
-        "train_loss": train_loss,
-        "train_acc": train_acc,
-        ...
-    }
-    pickle.dump(dynamics, log)
+    s_avg_t_losses.append(np.mean(np.array(m_t_losses)))
+    s_std_t_losses.append(np.std(np.array(m_t_losses)))
+    s_avg_t_accs.append(np.mean(np.array(m_t_accs)))
+    s_std_t_accs.append(np.std(np.array(m_t_accs)))
+
+    s_avg_v_losses.append(np.mean(np.array(m_v_losses)))
+    s_std_v_losses.append(np.std(np.array(m_v_losses)))
+    s_avg_v_accs.append(np.mean(np.array(m_v_accs)))
+    s_std_v_accs.append(np.std(np.array(m_v_accs)))
+
+pickle.dump(s_avg_t_losses, log)
+pickle.dump(s_avg_t_accs, log)
+pickle.dump(s_std_t_losses, log)
+pickle.dump(s_std_t_accs, log)
+
+pickle.dump(s_avg_v_losses, log)
+pickle.dump(s_avg_v_accs, log)
+pickle.dump(s_std_v_losses, log)
+pickle.dump(s_std_v_accs, log)
 
 log.close()
 
-plot_figures("cifar10_mean_log.pickle", name="CIFAR10", mode="train", mean=True)
+plt.figure()
+for i, s in enumerate(scales):
+    plt.errorbar(list(range(len(s_avg_t_losses[i]))), s_avg_t_losses[i], yerr=s_std_t_losses[i], label = "scale {}".format(s))
+plt.title("Average train loss")
+plt.xlabel("Epochs")
+plt.ylabel("Categorical cross entropy")
+plt.savefig("train_loss_cifar_scales.pdf")
 
-log = open("cifar10_valid_mean_log.pickle", "wb")
-pickle.dump(parameters, log)
-pickle.dump(len(scales), log)
+plt.figure()
+for i, s in enumerate(scales):
+    plt.errorbar(list(range(len(s_avg_t_accs[i]))), s_avg_t_accs[i], yerr=s_std_t_accs[i], label = "scale {}".format(s))
+plt.title("Average train accuracy")
+plt.xlabel("Epochs")
+plt.ylabel("Accuracy %")
+plt.savefig("train_acc_cifar_scales.pdf")
 
-for s in scales: 
-    avg_valid_losses = []
-    avg_valid_accs = []
+plt.figure()
+for i, s in enumerate(scales):
+    plt.errorbar(list(range(len(s_avg_v_losses[i]))), s_avg_v_losses[i], yerr=s_std_v_losses[i], label = "scale {}".format(s))
+plt.title("Average validation loss")
+plt.xlabel("Epochs")
+plt.ylabel("Categorical cross entropy")
+plt.savefig("valid_loss_cifar_scales.pdf")
 
-    test_transf = transforms.Compose([
-        RandomRescale(size=32, sampling="uniform", scales=(s, s)), 
-        transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-        ]) 
-    valid_set = Subset(datasets.CIFAR10(root='./cifardata', train=True, transform=test_transf, download=True), idx[:10000])
-    valid_loader = DataLoader(valid_set, batch_size=batch_size, shuffle=True)
-    
-    s_valid_loss = []
-    s_valid_acc = []
-
-    for ii in range(repeats):
-        infile = open("trained_model_{}_cifar.pickle".format(ii), "rb")
-        model = pickle.load(infile)
-
-        valid_l, valid_a = test(model, valid_loader, criterion, epoch, batch_log, device)
-        
-        s_valid_loss.append(valid_l)
-        s_valid_acc.append(valid_a)
-
-    avg_valid_losses.append(np.mean(np.array(s_valid_loss)))
-    avg_valid_accs.append(np.mean(np.array(s_valid_acc)))
-
-    dynamics = {
-        "scale": s,
-        "valid_loss": avg_valid_losses,
-        "valid_acc": avg_valid_accs
-    }
-    pickle.dump(dynamics, log)  
-
-log.close()          
-
-plot_figures("cifar10_valid_mean_log.pickle", name="CIFAR10", mode="valid", mean=False)
+plt.figure()
+for i, s in enumerate(scales):
+    plt.errorbar(list(range(len(s_avg_v_accs[i]))), s_avg_v_accs[i], yerr=s_std_v_accs[i], label = "scale {}".format(s))
+plt.title("Average validation accuracy")
+plt.xlabel("Epochs")
+plt.ylabel("Accuracy %")
+plt.savefig("valid_acc_cifar_scales.pdf")

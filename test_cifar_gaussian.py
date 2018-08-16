@@ -32,7 +32,7 @@ import pickle
 device =  torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
-nb_epochs=150
+nb_epochs=200
 learning_rate = 0.00001
 batch_size = 128
 batch_log = 70
@@ -98,7 +98,7 @@ for model in models:
         test_transf = transforms.Compose([
                             transforms.Resize(40), RandomRescale(size = 40, scales = (s, s), sampling = "uniform"), 
                             transforms.ToTensor(), transforms.Normalize((0.1307,),(0.3081,))])
-        test_set = datasets.MNIST(root=root, train=False, transform=test_transf, download=True)
+        test_set = datasets.CIFAR10(root=root, train=False, transform=test_transf, download=True)
         test_loader = DataLoader(dataset=test_set, batch_size=batch_size,shuffle=False, num_workers=1, pin_memory=True)
 
         test_l, test_a = test(model, test_loader, criterion, epoch, batch_log, device)
