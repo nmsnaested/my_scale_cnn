@@ -58,8 +58,9 @@ parameters = {
     "overlap": srange    
 }
 
-scales = [0.75, 0.875, 1.0] # crop center 24x24 or 28x28 and resize to 32x32, or leave 32x32 
 criterion = nn.CrossEntropyLoss()
+
+scales = [0.75, 0.875, 1.0] # crop center 24x24 or 28x28 and resize to 32x32, or leave 32x32 
 
 log = open("cifar10_mean_log.pickle", "wb")
 pickle.dump(parameters, log)
@@ -85,22 +86,25 @@ for ii in range(repeats):
     train_acc = []
     valid_loss = []
     valid_acc = []
-
     for epoch in range(1, nb_epochs + 1): 
         train_l, train_a = train(model, train_loader, learning_rate, criterion, epoch, batch_log, device) 
         train_l, train_a = test(model, train_loader, criterion, epoch, batch_log, device) 
+        valid_l, valid_a
         train_loss.append(train_l)
-        train_acc.append(train_a) 
+        train_acc.append(train_a)
+        valid_loss.append
+        valid_acc.append 
     
+    with open("model_{}_cifar.pickle".format(ii), "wb") as save:
+        pickle.dump(model, save)
+
     dynamics = {
         "model": ii,
         "train_loss": train_loss,
-        "train_acc": train_acc
+        "train_acc": train_acc,
+        ...
     }
     pickle.dump(dynamics, log)
-
-    with open("trained_model_{}_cifar.pickle".format(ii), "wb") as save:
-        pickle.dump(model, save)
 
 log.close()
 
@@ -125,19 +129,13 @@ for s in scales:
     s_valid_acc = []
 
     for ii in range(repeats):
-        infile = open("trained_model_{}.pickle".format(ii), "rb")
+        infile = open("trained_model_{}_cifar.pickle".format(ii), "rb")
         model = pickle.load(infile)
 
-        m_valid_loss = []
-        m_valid_acc = []
-    
-        for epoch in range(1, nb_epochs + 1):
-            valid_l, valid_a = test(model, valid_loader, criterion, epoch, batch_log, device)
-            m_valid_loss.append(valid_l)
-            m_valid_acc.append(valid_a)
-
-        s_valid_loss.append(m_valid_loss)
-        s_valid_acc.append(m_valid_acc)
+        valid_l, valid_a = test(model, valid_loader, criterion, epoch, batch_log, device)
+        
+        s_valid_loss.append(valid_l)
+        s_valid_acc.append(valid_a)
 
     avg_valid_losses.append(np.mean(np.array(s_valid_loss)))
     avg_valid_accs.append(np.mean(np.array(s_valid_acc)))

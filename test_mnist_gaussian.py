@@ -23,7 +23,7 @@ import torch.optim as optim
 from scale_cnn.convolution import ScaleConvolution
 from scale_cnn.pooling import ScalePool
 
-from architectures import SiCNN_3
+from architectures import SiCNN_3, kanazawa
 
 from functions import train, test, plot_figures
 from rescale import RandomRescale
@@ -42,10 +42,10 @@ f_in = 1
 size = 5
 ratio = 2**(2/3) 
 nratio = 3
-srange = 0 
+srange = 2
 padding = 0
 
-log = open("mnist_gaussian_sr0_log.pickle", "wb")
+log = open("mnist_gaussian_k_log.pickle", "wb")
 
 parameters = {
     "epochs": nb_epochs,
@@ -80,14 +80,15 @@ test_losses = []
 test_accs = []
 
 for ii in range(repeats):
-    model = SiCNN_3(f_in, size, ratio, nratio, srange, padding)
+    model = kanazawa(f_in, ratio, nratio, srange)
+#    model = SiCNN_3(f_in, size, ratio, nratio, srange, padding)
     model.to(device)
 
     for epoch in range(1, nb_epochs + 1): 
         train_l, train_a = train(model, train_loader, learning_rate, criterion, epoch, batch_log, device) 
         train_l, train_a = test(model, train_loader, criterion, epoch, batch_log, device) 
     
-    pickle.dump(model, open("trained_model_{}_sr0.pickle".format(ii), "wb"))
+    pickle.dump(model, open("trained_model_{}_k.pickle".format(ii), "wb"))
 
     #lists of last test loss and acc for each scale with model ii
     s_test_loss = [] 
@@ -133,18 +134,18 @@ plt.errorbar(scales, avg_test_losses, yerr=std_test_losses)
 plt.title("Average loss vs Test scale")
 plt.xlabel("Test scale")
 plt.ylabel("Categorical cross entropy")
-plt.savefig("test_loss_gaussian_mean_sr0.pdf")
+plt.savefig("test_loss_gaussian_mean_k.pdf")
 
 plt.figure()
 plt.errorbar(scales, avg_test_accs, yerr=std_test_accs)
 plt.title("Average accuracy vs Test scale")
 plt.xlabel("Test scale")
 plt.ylabel("Accuracy %")
-plt.savefig("test_acc_gaussian_mean_sr0.pdf")
+plt.savefig("test_acc_gaussian_mean_k.pdf")
 
 plt.figure()
 plt.errorbar(scales, [100-x for x in avg_test_accs], yerr=std_test_accs)
 plt.title("Average error vs Test scale")
 plt.xlabel("Test scale")
 plt.ylabel("Error %")
-plt.savefig("test_err_gaussian_mean_sr0.pdf")
+plt.savefig("test_err_gaussian_mean_k.pdf")
