@@ -35,8 +35,8 @@ def train(model, train_loader, learning_rate, criterion, epoch, batch_log, devic
 
     model.train()
 
-    for idx, (images,labels) in enumerate(train_loader, 0):
-        images,labels=images.to(device),labels.to(device)
+    for idx, (images, labels) in enumerate(train_loader):
+        images, labels = images.to(device), labels.to(device)
         optimizer.zero_grad()
         outputs = model(images)
         loss = criterion(outputs, labels)
@@ -48,25 +48,30 @@ def train(model, train_loader, learning_rate, criterion, epoch, batch_log, devic
         correct = (predicted == labels).long().sum().item()        
         correct_cnt += correct
         running_loss += loss.item()
-        if idx % batch_log == (batch_log-1):  
-            tot_acc = 100.*correct_cnt / (len(images)*(idx+1))
-            avg_loss = running_loss/(idx+1)
+        if idx % batch_log == (batch_log - 1):  
+            tot_acc = 100. * correct_cnt / (len(images) * (idx + 1))
+            avg_loss = running_loss / (idx + 1)
             print('Training Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.5f}\tAverage loss: {:.5f}\tAverage acc: {:.0f}%'.format(
-                epoch, (idx+1)*len(images), len(train_loader.dataset), 100. * (idx+1) / len(train_loader), 
-                loss.item(), avg_loss, tot_acc ))
+                epoch, 
+                (idx + 1) * len(images), 
+                len(train_loader.dataset), 
+                100. * (idx + 1) / len(train_loader), 
+                loss.item(), 
+                avg_loss, tot_acc
+            ))
 
     #print(time_logging.text_statistics())
     return avg_loss, tot_acc
 
-def test(model,test_loader,criterion,epoch,batch_log,device):
+def test(model, test_loader, criterion, epoch, batch_log, device):
     correct_cnt = 0
     total_loss = 0.0
 
     model.eval()
 
     with torch.no_grad():
-        for idx,(images,labels) in enumerate(test_loader):
-            images,labels=images.to(device),labels.to(device)
+        for idx, (images, labels) in enumerate(test_loader):
+            images, labels = images.to(device), labels.to(device)
             outputs = model(images)
             loss = criterion(outputs, labels)
             total_loss += loss.item() * images.size(0)
@@ -76,7 +81,8 @@ def test(model,test_loader,criterion,epoch,batch_log,device):
             
         avg_loss = total_loss / len(test_loader.dataset)
         tot_acc = 100. * correct_cnt / len(test_loader.dataset)
-        print('Testing Epoch: {} \tAverage loss: {:.5f}\tAverage acc: {:.0f}%'.format(epoch, avg_loss, tot_acc ))
+        print('Testing Epoch: {} \tAverage loss: {:.5f}\tAverage acc: {:.0f}%'.format(
+            epoch, avg_loss, tot_acc ))
         
     return avg_loss, tot_acc
 

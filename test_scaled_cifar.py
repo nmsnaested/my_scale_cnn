@@ -114,8 +114,8 @@ for s in scales:
             valid_l, valid_a = test(model, valid_loader, criterion, epoch, batch_log, device)
             train_loss.append(train_l)
             train_acc.append(train_a)
-            valid_loss.append
-            valid_acc.append 
+            valid_loss.append(valid_l)
+            valid_acc.append (valid_a)
         
         with open("model_{}_{}_cifar.pickle".format(s, ii), "wb") as save:
             pickle.dump(model, save)

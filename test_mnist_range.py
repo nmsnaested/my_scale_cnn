@@ -42,10 +42,10 @@ f_in = 1
 size=5
 ratio=2**(2/3)
 nratio=3
-srange=2
+srange=0
 padding=0
 
-log = open("mnist_range_log.pickle", "wb")
+log = open("mnist_range_sr0_log.pickle", "wb")
 
 parameters = {
     "epochs": nb_epochs,
@@ -95,7 +95,7 @@ for scale in scales:
         for epoch in range(1, nb_epochs + 1): 
             train_l, train_a = train(model, train_loader, learning_rate, criterion, epoch, batch_log, device) 
             train_l, train_a = test(model, train_loader, criterion, epoch, batch_log, device) 
-        
+
         test_l, test_a = test(model, test_loader, criterion, epoch, batch_log, device)
             
         s_test_losses.append(test_l)
@@ -103,12 +103,12 @@ for scale in scales:
 
         pickle.dump(model, log)
 
-        dynamics = {
-            "scale": scale,
-            "test_losses": s_test_losses,
-            "test_accs": s_test_accs
-        }
-        pickle.dump(dynamics, log)
+    dynamics = {
+        "scale": scale,
+        "test_losses": s_test_losses,
+        "test_accs": s_test_accs
+    }
+    pickle.dump(dynamics, log)
     
     mean_l = np.mean(np.array(s_test_losses))
     std_l = np.std(np.array(s_test_losses))
@@ -120,28 +120,33 @@ for scale in scales:
     std_test_losses.append(std_l)
     std_test_accs.append(std_a)
 
+pickle.dump(avg_test_losses, log)
+pickle.dump(std_test_losses, log)
+pickle.dump(avg_test_accs, log)
+pickle.dump(std_test_accs, log)
+
 log.close()
 
 plt.figure()
-plt.plot([str(s) for s in scales], avg_test_losses, yerr=std_test_losses)
+plt.errorbar([str(s) for s in scales], avg_test_losses, yerr=std_test_losses)
 plt.title("Average loss vs Scale factor")
 plt.xlabel("Scale range")
 plt.ylabel("Categorical cross entropy")
 plt.legend()
-plt.savefig("test_loss_range_mean.pdf")
+plt.savefig("test_loss_range_mean_sr0.pdf")
 
 plt.figure()
-plt.plot([str(s) for s in scales], avg_test_accs, yerr=std_test_accs)
+plt.errorbar([str(s) for s in scales], avg_test_accs, yerr=std_test_accs)
 plt.title("Average accuracy vs Scale factor")
 plt.xlabel("Scale range")
 plt.ylabel("Accuracy %")
 plt.legend()
-plt.savefig("test_acc_range_mean.pdf")
+plt.savefig("test_acc_range_mean_sr0.pdf")
 
 plt.figure()
-plt.plot([str(s) for s in scales], [100-x for x in avg_test_accs], yerr=std_test_accs)
+plt.errorbar([str(s) for s in scales], [100-x for x in avg_test_accs], yerr=std_test_accs)
 plt.title("Average error vs Test scale")
 plt.xlabel("Test scale")
 plt.ylabel("Error %")
 plt.legend()
-plt.savefig("test_err_range_mean.pdf")
+plt.savefig("test_err_range_mean_sr0.pdf")

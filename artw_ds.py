@@ -39,7 +39,7 @@ class GetArtDataset(Dataset):
             for line in f.readlines():
                 self.names.append(line.split("\t")[0])
 
-    def __getitem__(self,idx):
+    def __getitem__(self, idx):
         name = self.images[idx]
         image = os.path.join(self.imgdir, name)
         if self.transforms is not None:

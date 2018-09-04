@@ -23,9 +23,9 @@ import torch.optim as optim
 from scale_cnn.convolution import ScaleConvolution
 from scale_cnn.pooling import ScalePool
 
-from architectures import SiCNN_3, kanazawa
+from architectures import SiCNN_3, kanazawa, SiCNN_3big
 
-from functions import train, test, plot_figures
+from functions import filter_size, train, test, plot_figures
 from rescale import RandomRescale
 import pickle
 
@@ -36,7 +36,7 @@ nb_epochs=200
 learning_rate = 0.00001
 batch_size = 128
 batch_log = 70
-repeats = 6
+repeats = 5
 
 f_in = 3
 size = 5
@@ -45,20 +45,21 @@ nratio = 3
 srange = 2
 padding = 0
 
-log = open("cifar_gaussian_log.pickle", "wb")
+log = open("cifar_gaussian_k_log.pickle", "wb")
 
 parameters = {
     "epochs": nb_epochs,
     "learning rate": learning_rate,
     "batch size": batch_size,
-    "repetitions": 6,
+    "repetitions": repeats,
     "size": size,
     "ratio": ratio,
-    "nb channels": nratio
+    "nb channels": nratio, 
+    "overlap": srange
 }
 pickle.dump(parameters, log)
 
-root = './cifardata'
+root = './cifardata' 
 if not os.path.exists(root):
     os.mkdir(root)
 
@@ -73,87 +74,101 @@ criterion = nn.CrossEntropyLoss()
 
 scales = [0.40, 0.52, 0.64, 0.76, 0.88, 1.0, 1.12, 1.24, 1.36, 1.48, 1.60]
 
-test_losses = []
-test_accs = []
+avg_test_losses = []
+avg_test_accs = []
+std_test_losses = []
+std_test_accs = []
 
-models = [
-    kanazawa(f_in, ratio, nratio, srange=0),
-    kanazawa(f_in, ratio, nratio, srange),
-    SiCNN_3(f_in, size, ratio, nratio, srange=0),
-    SiCNN_3(f_in, size, ratio, nratio, srange)
-]
-pickle.dump(len(models), log)
+for m in range(4): #nb of models
+    locals()['test_losses_{0}'.format(m)] = []
+    locals()['test_accs_{0}'.format(m)] = []
 
-for model in models:
-    model.to(device)
-
-    for epoch in range(1, nb_epochs + 1): 
-        train_l, train_a = train(model, train_loader, learning_rate, criterion, epoch, batch_log, device) 
-        train_l, train_a = test(model, train_loader, criterion, epoch, batch_log, device) 
+for ii in range(repeats):
+        
+    models = [
+        kanazawa(f_in, ratio, nratio, srange=0),
+        kanazawa(f_in, ratio, nratio, srange),
+        kanazawa(f_in, ratio=2**(1/3), nratio=6, srange=0),
+        kanazawa(f_in, ratio=2**(1/3), nratio=6, srange=srange)
+    ]
+    """SiCNN_3(f_in, size, ratio, nratio, srange=0),
+        SiCNN_3(f_in, size, ratio, nratio, srange),
+        SiCNN_3(f_in, filter_size(size, ratio, nratio), 1/ratio, nratio, srange),
+        SiCNN_3big(f_in, size, ratio, nratio, srange=0), 
+        SiCNN_3(f_in, size, ratio=2**(1/3), nratio=6, srange=0), 
+        SiCNN_3(f_in, size, ratio=2**(1/3), nratio=6, srange=2), 
+        SiCNN_3(f_in, filter_size(size, 2**(1/3), 6), ratio=2**(-1/3), nratio=6, srange=2)"""
     
-    #lists of last test loss and acc for each scale with model ii
-    s_test_loss = [] 
-    s_test_acc = []
-    for s in scales: 
-        test_transf = transforms.Compose([
-                            transforms.Resize(40), RandomRescale(size = 40, scales = (s, s), sampling = "uniform"), 
-                            transforms.ToTensor(), transforms.Normalize((0.1307,),(0.3081,))])
-        test_set = datasets.CIFAR10(root=root, train=False, transform=test_transf, download=True)
-        test_loader = DataLoader(dataset=test_set, batch_size=batch_size,shuffle=False, num_workers=1, pin_memory=True)
+    pickle.dump(len(models), log)
 
-        test_l, test_a = test(model, test_loader, criterion, epoch, batch_log, device)
+    for m, model in enumerate(models):
+        print("trial {}, model {}".format(ii, m))
+        model.to(device)
 
-        s_test_loss.append(test_l) #take only last value 
-        s_test_acc.append(test_a)
+        for epoch in range(1, nb_epochs + 1): 
+            train_l, train_a = train(model, train_loader, learning_rate, criterion, epoch, batch_log, device) 
+            train_l, train_a = test(model, train_loader, criterion, epoch, batch_log, device) 
+    
+        pickle.dump(model, open("trained_model_{}_{}_k.pickle".format(m, ii), "wb"))
 
-    results = {
-        "model": model,
-        "loss": s_test_loss,
-        "acc": s_test_acc
-    }
-    pickle.dump(results, log)
+        #lists of last test loss and acc for each scale with model m, ii
+        s_test_loss = [] 
+        s_test_acc = []
+        for s in scales: 
+            test_transf = transforms.Compose([
+                                transforms.Resize(40), RandomRescale(size = 40, scales = (s, s), sampling = "uniform"), 
+                                transforms.ToTensor(), transforms.Normalize((0.1307,),(0.3081,))])
+            test_set = datasets.CIFAR10(root=root, train=False, transform=test_transf, download=True)
+            test_loader = DataLoader(dataset=test_set, batch_size=batch_size,shuffle=False, num_workers=1, pin_memory=True)
+
+            test_l, test_a = test(model, test_loader, criterion, epoch, batch_log, device)
+
+            s_test_loss.append(test_l) #take only last value 
+            s_test_acc.append(test_a)
+        
+        locals()['test_losses_{0}'.format(m)].append(s_test_loss)
+        locals()['test_accs_{0}'.format(m)].append(s_test_acc)
+
+
+for m in range(len(models)):
+    pickle.dump(locals()['test_losses_{0}'.format(m)], log)
+    pickle.dump(locals()['test_accs_{0}'.format(m)], log)
+
+    avg_test_losses.append(np.mean(np.array(locals()['test_losses_{0}'.format(m)]), axis=0))
+    avg_test_accs.append(np.mean(np.array(locals()['test_accs_{0}'.format(m)]), axis=0))
+    std_test_losses.append(np.std(np.array(locals()['test_losses_{0}'.format(m)]), axis=0))
+    std_test_accs.append(np.std(np.array(locals()['test_accs_{0}'.format(m)]), axis=0))
+
+pickle.dump(avg_test_losses, log)
+pickle.dump(avg_test_accs, log)
+pickle.dump(std_test_losses, log)
+pickle.dump(std_test_accs, log)
 
 log.close()
 
-infile = open("cifar_gaussian_log.pickle", "rb")
-params=pickle.load(infile)
-nb_models=pickle.load(infile)
-losses = []
-accs = []
-for ii in range(nb_models):
-    res = pickle.load(infile)
-    losses.append(res["loss"])
-    accs.append(res["acc"])
-
-
 plt.figure()
-plt.plot(scales, losses[0], label="Kanazawa sr=0")
-plt.plot(scales, losses[1], label="Kanazawa sr=2")
-plt.plot(scales, losses[2], label="SiCNN_3 sr=0")
-plt.plot(scales, losses[3], label="SiCNN_3 sr=2")
-plt.title("Loss vs Test scale")
+for m in range(len(models)): 
+    plt.errorbar(scales, avg_test_losses[m], yerr=std_test_losses[m], label="model {}".format(m))
+plt.title("Mean Loss vs Test scale")
 plt.xlabel("Test scale")
 plt.ylabel("Categorical cross entropy")
-plt.savefig("test_loss_gaussian_cifar.pdf")
+plt.legend()
+plt.savefig("avg_test_loss_gaussian_cifar.pdf")
 
 plt.figure()
-plt.plot(scales, accs[0], label="Kanazawa sr=0")
-plt.plot(scales, accs[1], label="Kanazawa sr=2")
-plt.plot(scales, accs[2], label="SiCNN_3 sr=0")
-plt.plot(scales, accs[3], label="SiCNN_3 sr=2")
-plt.title("Accuracy vs Test scale")
+for m in range(len(models)): 
+    plt.errorbar(scales, avg_test_accs[m], yerr=std_test_accs[m], label="model {}".format(m))
+plt.title("Mean Accuracy vs Test scale")
 plt.xlabel("Test scale")
 plt.ylabel("Accuracy %")
-plt.savefig("test_acc_gaussian_cifar.pdf")
-
-err = [[100-x for x in l] for l in accs]
+plt.legend()
+plt.savefig("avg_test_acc_gaussian_cifar.pdf")
 
 plt.figure()
-plt.plot(scales, err[0], label="Kanazawa sr=0")
-plt.plot(scales, err[1], label="Kanazawa sr=2")
-plt.plot(scales, err[2], label="SiCNN_3 sr=0")
-plt.plot(scales, err[3], label="SiCNN_3 sr=2")
-plt.title("Error vs Test scale")
+for m in range(len(models)): 
+    plt.errorbar(scales, [100-x for x in avg_test_accs[m]], yerr=std_test_accs[m], label="model {}".format(m))
+plt.title("Mean Error vs Test scale")
 plt.xlabel("Test scale")
 plt.ylabel("Error %")
-plt.savefig("test_err_gaussian_cifar.pdf")
+plt.legend()
+plt.savefig("avg_test_err_gaussian_cifar.pdf")

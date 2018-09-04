@@ -123,7 +123,7 @@ class kanazawa(nn.Module):
         self.nb_classes = nb_classes
 
         self.conv1 = ScaleConvolution(self.f_in, 36, 3, self.ratio, self.nratio, srange = 0, boundary_condition = "dirichlet", stride = 2)
-        self.conv2 = ScaleConvolution(36, 64, 3, self.ratio, self.nratio, srange = 3, boundary_condition = "dirichlet")
+        self.conv2 = ScaleConvolution(36, 64, 3, self.ratio, self.nratio, srange = self.srange, boundary_condition = "dirichlet")
         self.pool = ScalePool(self.ratio)
         
         self.fc1 = nn.Linear(64, 150, bias = True)
@@ -140,8 +140,74 @@ class kanazawa(nn.Module):
         x = self.fc2(x)
         return x
 
-class SiCNN_3(nn.Module): 
+class kanazawa_big(nn.Module): 
+    def __init__(self, f_in, ratio, nratio, srange=1, nb_classes=10): 
+        super().__init__()
+        '''
+        Scale equivariant arch, based on architecture in Kanazawa's paper https://arxiv.org/abs/1412.5104
+        selecting srange = 1 is equivalent to the paper
+        '''
+        self.f_in = f_in
+        self.ratio = ratio 
+        self.nratio = nratio
+        self.srange = srange
+        self.nb_classes = nb_classes
+
+        self.conv1 = ScaleConvolution(self.f_in, 69, 3, self.ratio, self.nratio, srange = 0, boundary_condition = "dirichlet", stride = 2)
+        self.conv2 = ScaleConvolution(69, 122, 3, self.ratio, self.nratio, srange = self.srange, boundary_condition = "dirichlet")
+        self.pool = ScalePool(self.ratio)
+        
+        self.fc1 = nn.Linear(122, 288, bias = True)
+        self.fc2 = nn.Linear(288, self.nb_classes, bias = True)
+
+    def forward(self, x): 
+        x = x.unsqueeze(1)  # [batch, sigma, feature, y, x]
+        x = x.repeat(1, self.nratio, 1, 1, 1)  # [batch, sigma, feature, y, x]
+        
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+        x = self.pool(x) # [batch,feature]
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
+
+class SiCNN_3big(nn.Module): 
     def __init__(self, f_in=1, size=5, ratio=2**(2/3), nratio=3, srange=1, padding=0, nb_classes=10): 
+        super().__init__()
+        '''
+        Scale equivariant arch with 3 convolutional layers
+        '''
+        self.f_in = f_in
+        self.size = size
+        self.ratio = ratio 
+        self.nratio = nratio
+        self.srange = srange
+        self.padding = padding
+        self.nb_classes = nb_classes
+
+        self.conv1 = ScaleConvolution(self.f_in, int(96*2.2), self.size, self.ratio, self.nratio, srange = 0, boundary_condition = "dirichlet", padding=self.padding, stride = 2)
+        self.conv2 = ScaleConvolution(int(96*2.2), int(96*2.2), self.size, self.ratio, self.nratio, srange = self.srange, boundary_condition = "dirichlet", padding=self.padding)
+        self.conv3 = ScaleConvolution(int(96*2.2), int(192*2.2), self.size, self.ratio, self.nratio, srange = self.srange, boundary_condition = "dirichlet", padding=self.padding)
+        self.pool = ScalePool(self.ratio)
+        
+        self.fc1 = nn.Linear(int(192*2.2), int(150*2.2), bias=True)
+        self.fc2 = nn.Linear(int(150*2.2), self.nb_classes, bias=True)
+
+    def forward(self, x): 
+        x = x.unsqueeze(1)  # [batch, sigma, feature, y, x]
+        x = x.repeat(1, self.nratio, 1, 1, 1)  # [batch, sigma, feature, y, x]
+        
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+        x = F.relu(self.conv3(x))
+        x = self.pool(x) # [batch,feature]
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
+
+
+class SiCNN_3(nn.Module): 
+    def __init__(self, f_in=1, size=5, ratio=2**(2/3), nratio=3, srange=2, padding=0, nb_classes=10): 
         super().__init__()
         '''
         Scale equivariant arch with 3 convolutional layers
@@ -173,7 +239,6 @@ class SiCNN_3(nn.Module):
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
         return x
-
 
 class SiAllCNN(nn.Module): 
     def __init__(self, f_in, ratio, nratio, nb_classes=10):
